@@ -3,11 +3,15 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import AuthLogo from "../auth-logo";
+import httpReq from "@/lib/httpReq";
+import { useCookies } from "react-cookie";
+import Link from 'next/link'
 
 export default function SignIn() {
 	const [name, setName] = useState<string>("");
 	const [password, setPassword] = useState<string>("");
+	const [cookies, setCookie] = useCookies(["token"]);
+	const [loading, setLoading] = useState(false);
 	const router = useRouter();
 
 	const tmpName = 'test';
@@ -24,7 +28,32 @@ export default function SignIn() {
 			return;
 		}
 		if (tmpName == name && tmpPwd == password) {
-			router.push("/home");
+			// httpReq.post("/api/login", { name, password })
+			// 	.then(res =>{
+			// 		if (res) {
+			// 			setCookie("token", res); // When a login is successful in the backend, a token value should be generated and response to the frontend...
+			// 			router.push("/home");
+			// 		} else {
+			// 			toast.warning("server error.");
+			// 		}
+			// 	})
+			setLoading(true);
+			try {
+				const res = await httpReq.post("/api/login", { name, password });
+				setLoading(false);
+				if (res) {
+					const token = await httpReq.get("/api/me");
+					if (token) {
+						setCookie("token", res);
+						router.push('/home');
+					} else {
+						toast.warning("unknown token error.");
+					}
+				}
+			} catch (error) {
+				toast.warning('network error');
+				router.push('/home');
+			}
 		} else {
 			toast.warning("Incorrect username or passowrd.");
 			return;
@@ -33,14 +62,14 @@ export default function SignIn() {
 	};
 
 	return (
-		<div style={{margin: "auto"}}>
+		<div className="m-auto">
 			<div className="max-w-3xl mx-auto text-center pb-12">
-				{/* Logo */}
-				<AuthLogo />
-				{/* Page title */}
+			<div className="mb-5">
+				<Link className="inline-flex" href="/">
+				</Link>
+			</div>
 				<h1 className="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60">Sign in to your account</h1>
 			</div>
-			{/* Form */}
 			<div className="max-w-sm mx-auto">
 				<form>
 					<div className="space-y-4">
@@ -60,7 +89,7 @@ export default function SignIn() {
 						</div>
 					</div>
 					<div className="mt-7">
-						<button style={{width: '40%', float: 'right'}} className="btn text-sm text-white bg-purple-500 hover:bg-purple-600 w-full shadow-sm group" onClick={onSignIn}>
+						<button style={{width: '40%', float: 'right'}} className="btn text-sm text-white bg-purple-500 hover:bg-purple-600 w-full shadow-sm group" onClick={onSignIn} disabled={loading}>
 							Sign In <span className="tracking-normal text-purple-300 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1"></span>
 						</button>
 					</div>
